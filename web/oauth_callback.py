@@ -60,57 +60,86 @@ async def get_patreon_token(code: str) -> Dict[str, Any]:
         return response.json()
 
 @router.get("/callback", response_class=HTMLResponse)
-async def oauth_callback(request: Request, code: str, state: str):
-    """Обработка callback от Patreon OAuth"""
+async def oauth_callback(request: Request, code: str, state: str = None):
     try:
-        # Получение токена
-        token_data = await get_patreon_token(code)
-        access_token = token_data["access_token"]
-        
-        # Получение данных пользователя
-        user_data = await get_patreon_user_data(access_token)
-        
-        # Извлечение необходимой информации
-        patreon_id = user_data["data"]["id"]
-        email = user_data["data"]["attributes"].get("email")
-        
-        # Определение уровня подписки
-        tier = None
-        if "included" in user_data:
-            for item in user_data["included"]:
-                if item["type"] == "member":
-                    tier = item["attributes"].get("patron_status")
-                    break
-        
-        # Сохранение данных пользователя
-        user_info = {
-            "patreon_id": patreon_id,
-            "telegram_id": int(state),  # state содержит telegram_id
-            "email": email,
-            "access_token": access_token,
-            "tier": tier
-        }
-        
-        save_user_data(user_info)
-        
-        # Логируем tier и карту каналов
-        logger.info(f"tier from Patreon: {tier}")
-        logger.info(f"TIER_TO_CHANNEL: {TIER_TO_CHANNEL}")
-        
-        # Отправляем инвайт в Telegram
-        try:
-            bot = Bot(token=BOT_TOKEN)
-            invite_result = await invite_user(bot, int(state), tier)
-            logger.info(f"invite_user result: {invite_result}")
-        except Exception as e:
-            logger.error(f"Ошибка при вызове invite_user: {e}")
-        
-        # Отображение страницы успешной авторизации
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            token_resp = await client.post(
+                "https://www.patreon.com/api/oauth2/token",
+                data={
+                    "code": code,
+                    "grant_type": "authorization_code",
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
+                    "redirect_uri": REDIRECT_URI,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            logger.warning(f"Patreon token status: {token_resp.status_code}")
+            logger.warning(f"Patreon token raw: {token_resp.text}")
+            token_data = token_resp.json()
+            access_token = token_data.get("access_token")
+    except httpx.RequestError as e:
+        logger.error(f"Patreon token exchange failed: {e}")
+        raise HTTPException(status_code=400, detail="Patreon request failed or timed out")
+
+    if not access_token:
+        raise HTTPException(status_code=400, detail="Access token not received")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            user_resp = await client.get(
+                "https://www.patreon.com/api/oauth2/v2/identity?include=memberships&fields[user]=email&fields[member]=patron_status",
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+            user_data = user_resp.json()
+            logger.warning(f"Full user_data dump: {user_data}")
+
+            if "data" not in user_data:
+                logger.warning(f"Patreon API unexpected response: {user_data}")
+                raise HTTPException(status_code=400, detail="Invalid response from Patreon")
+
+    except Exception as e:
+        logger.error(f"Patreon user info failed: {e}")
+        raise HTTPException(status_code=400, detail="User info request failed")
+
+    patreon_id = user_data["data"]["id"]
+    email = user_data["data"]["attributes"].get("email", "unknown")
+    memberships = user_data.get("included", [])
+
+    tier = "none"
+    for member in memberships:
+        if member["type"] == "member":
+            status = member["attributes"].get("patron_status")
+            if status == "active_patron":
+                tier = "tier1"  # Привязываем к ключу в TIER_TO_CHANNEL
+                break
+
+    if tier == "none":
         return templates.TemplateResponse(
             "accept.html",
-            {"request": request}
+            {"request": request, "error": "У пользователя нет активной подписки на Patreon"}
         )
-        
+
+    telegram_id = state
+
+    # Сохраняем пользователя в базу
+    user_info = {
+        "patreon_id": patreon_id,
+        "telegram_id": int(telegram_id),
+        "email": email,
+        "access_token": access_token,
+        "tier": tier
+    }
+    save_user_data(user_info)
+
+    try:
+        bot = Bot(token=BOT_TOKEN)
+        await invite_user(bot, int(telegram_id), tier)
+        logger.info(f"Invite sent to telegram_id={telegram_id}, tier={tier}")
     except Exception as e:
-        logger.error(f"Ошибка при обработке OAuth callback: {e}")
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+        logger.warning(f"Invite error: {e}")
+
+    return templates.TemplateResponse(
+        "accept.html",
+        {"request": request}
+    )
