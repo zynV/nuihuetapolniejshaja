@@ -14,7 +14,8 @@ from config import (
     REDIRECT_URI,
     CLIENT_ID,
     CLIENT_SECRET,
-    BOT_TOKEN
+    BOT_TOKEN,
+    TIER_TO_CHANNEL
 )
 from database.db import save_user_data, get_user_by_patreon_id
 from aiogram import Bot
@@ -91,6 +92,18 @@ async def oauth_callback(request: Request, code: str, state: str):
         }
         
         save_user_data(user_info)
+        
+        # Логируем tier и карту каналов
+        logger.info(f"tier from Patreon: {tier}")
+        logger.info(f"TIER_TO_CHANNEL: {TIER_TO_CHANNEL}")
+        
+        # Отправляем инвайт в Telegram
+        try:
+            bot = Bot(token=BOT_TOKEN)
+            invite_result = await invite_user(bot, int(state), tier)
+            logger.info(f"invite_user result: {invite_result}")
+        except Exception as e:
+            logger.error(f"Ошибка при вызове invite_user: {e}")
         
         # Отображение страницы успешной авторизации
         return templates.TemplateResponse(
