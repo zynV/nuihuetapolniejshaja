@@ -43,5 +43,5 @@ TIER_TO_CHANNEL = {
 # Patreon API endpoints
 PATREON_API_BASE = 'https://www.patreon.com/api/oauth2/v2'
 PATREON_TOKEN_URL = 'https://www.patreon.com/api/oauth2/token'
-PATREON_USER_URL = f'{PATREON_API_BASE}/user'
+PATREON_USER_URL = f'{PATREON_API_BASE}/identity'
 PATREON_MEMBERSHIP_URL = f'{PATREON_API_BASE}/memberships'
