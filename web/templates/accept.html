@@ -40,7 +40,14 @@
         .icon {
             font-size: 4rem;
             margin-bottom: 1rem;
+        }
+        
+        .success {
             color: #27ae60;
+        }
+        
+        .error {
+            color: #e74c3c;
         }
         
         .button {
@@ -60,16 +67,23 @@
 </head>
 <body>
     <div class="container">
-        <div class="icon">✅</div>
-        <h1>Авторизация успешна!</h1>
-        <p>
-            Спасибо за авторизацию через Patreon. Мы отправили вам ссылку для вступления в канал в Telegram.
-            Пожалуйста, проверьте свой чат с ботом.
-        </p>
-        <p>
-            Если вы не получили сообщение, попробуйте использовать команду /start в чате с ботом.
-        </p>
-        <a href="https://t.me/PolinkaASMR_bot" class="button">Перейти к боту</a>
+        {% if error %}
+            <div class="icon error">⚠️</div>
+            <h1>Внимание!</h1>
+            <p>{{ error }}</p>
+            <a href="https://t.me/PolinkaASMR_bot" class="button">Перейти к боту</a>
+        {% else %}
+            <div class="icon success">✅</div>
+            <h1>Авторизация успешна!</h1>
+            <p>
+                Спасибо за авторизацию через Patreon. Мы отправили вам ссылку для вступления в канал в Telegram.
+                Пожалуйста, проверьте свой чат с ботом.
+            </p>
+            <p>
+                Если вы не получили сообщение, попробуйте использовать команду /start в чате с ботом.
+            </p>
+            <a href="https://t.me/PolinkaASMR_bot" class="button">Перейти к боту</a>
+        {% endif %}
     </div>
 </body>
 </html> 

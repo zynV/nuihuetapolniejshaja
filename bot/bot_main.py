@@ -1,10 +1,18 @@
 import logging
+import sys
+import os
+
+# Добавляем корневую директорию проекта в PYTHONPATH
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message
 
 from config import BOT_TOKEN
 from bot.handlers.utils import get_auth_url
+from bot.handlers.start import router as start_router
+from bot.handlers.admin import router as admin_router
 
 # Настройка логирования
 logging.basicConfig(
@@ -22,26 +30,9 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-@dp.message(Command("start"))
-async def cmd_start(message: Message):
-    """Обработчик команды /start"""
-    try:
-        auth_url = get_auth_url(message.from_user.id)
-        
-        await message.answer(
-            "👋 Привет! Я бот для доступа к приватным каналам.\n\n"
-            "Для получения доступа, пожалуйста, авторизуйтесь через Patreon:\n"
-            f"{auth_url}\n\n"
-            "После авторизации вы получите ссылку для вступления в канал."
-        )
-        
-        logger.info(f"Отправлена ссылка авторизации пользователю {message.from_user.id}")
-        
-    except Exception as e:
-        logger.error(f"Ошибка при обработке команды /start: {e}")
-        await message.answer(
-            "😔 Произошла ошибка. Пожалуйста, попробуйте позже или обратитесь к администратору."
-        )
+# Подключаем роутеры
+dp.include_router(start_router)
+dp.include_router(admin_router)
 
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
@@ -64,4 +55,8 @@ async def main():
         await dp.start_polling(bot)
     except Exception as e:
         logger.error(f"Ошибка при запуске бота: {e}")
-        raise 
+        raise
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

@@ -87,8 +87,9 @@ async def oauth_callback(request: Request, code: str, state: str = None):
 
     try:
         async with httpx.AsyncClient() as client:
+            # Расширяем запрос, чтобы получить больше информации о подписке
             user_resp = await client.get(
-                "https://www.patreon.com/api/oauth2/v2/identity?include=memberships&fields[user]=email&fields[member]=patron_status",
+                "https://www.patreon.com/api/oauth2/v2/identity?include=memberships&fields[user]=email&fields[member]=patron_status,currently_entitled_amount_cents",
                 headers={"Authorization": f"Bearer {access_token}"}
             )
             user_data = user_resp.json()
@@ -106,12 +107,24 @@ async def oauth_callback(request: Request, code: str, state: str = None):
     email = user_data["data"]["attributes"].get("email", "unknown")
     memberships = user_data.get("included", [])
 
+    # Определяем tier на основе суммы подписки
     tier = "none"
     for member in memberships:
         if member["type"] == "member":
             status = member["attributes"].get("patron_status")
+            amount_cents = member["attributes"].get("currently_entitled_amount_cents", 0)
+            
+            logger.warning(f"Member status: {status}, amount_cents: {amount_cents}")
+            
             if status == "active_patron":
-                tier = "tier1"  # Привязываем к ключу в TIER_TO_CHANNEL
+                if amount_cents >= 500:  # $5
+                    tier = "tier3"
+                elif amount_cents >= 400:  # $4
+                    tier = "tier2"
+                elif amount_cents >= 300:  # $3
+                    tier = "tier1"
+                else:
+                    tier = "none"
                 break
 
     if tier == "none":
@@ -134,10 +147,24 @@ async def oauth_callback(request: Request, code: str, state: str = None):
 
     try:
         bot = Bot(token=BOT_TOKEN)
+        # Проверяем, может ли бот отправить сообщение пользователю
+        try:
+            await bot.send_chat_action(chat_id=int(telegram_id), action="typing")
+        except Exception as e:
+            logger.error(f"Не удалось отправить сообщение пользователю {telegram_id}: {e}")
+            return templates.TemplateResponse(
+                "accept.html",
+                {"request": request, "error": "Пожалуйста, начните диалог с ботом, отправив команду /start"}
+            )
+            
         await invite_user(bot, int(telegram_id), tier)
         logger.info(f"Invite sent to telegram_id={telegram_id}, tier={tier}")
     except Exception as e:
         logger.warning(f"Invite error: {e}")
+        return templates.TemplateResponse(
+            "accept.html",
+            {"request": request, "error": "Произошла ошибка при отправке приглашения. Пожалуйста, попробуйте снова или обратитесь к администратору."}
+        )
 
     return templates.TemplateResponse(
         "accept.html",
