@@ -1,0 +1,6 @@
+aiogram==3.4.1
+aiohttp
+fastapi
+python-dotenv
+sqlite-utils
+httpx

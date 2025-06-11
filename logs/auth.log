@@ -1,0 +1,24 @@
+import logging
+logging.basicConfig(
+    filename='logs/auth.log',
+    level=logging.INFO,
+    format='[%(asctime)s] %(levelname)s — %(message)s',
+)
+logger = logging.getLogger(__name__)
+ [2025-06-05 23:13:36,306] INFO — Start polling
+[2025-06-05 23:13:36,391] INFO — Run polling for bot @PolinkaASMR_bot id=7788058987 - 'PolinkaASMR'
+[2025-06-05 23:13:36,434] INFO — Update id=213141371 is not handled. Duration 0 ms by bot id=7788058987
+[2025-06-05 23:15:21,388] INFO — Update id=213141372 is handled. Duration 1206 ms by bot id=7788058987
+[2025-06-05 23:16:13,041] WARNING — Received SIGINT signal
+[2025-06-05 23:16:13,042] INFO — Polling stopped for bot @PolinkaASMR_bot id=7788058987 - 'PolinkaASMR'
+[2025-06-05 23:16:13,042] INFO — Polling stopped
+[2025-06-05 23:18:33,361] INFO — Start polling
+[2025-06-05 23:18:33,434] INFO — Run polling for bot @PolinkaASMR_bot id=7788058987 - 'PolinkaASMR'
+[2025-06-05 23:18:53,493] INFO — Update id=213141373 is handled. Duration 185 ms by bot id=7788058987
+[2025-06-05 23:19:30,912] WARNING — Received SIGINT signal
+[2025-06-05 23:19:30,913] INFO — Polling stopped for bot @PolinkaASMR_bot id=7788058987 - 'PolinkaASMR'
+[2025-06-05 23:19:30,913] INFO — Polling stopped
+[2025-06-05 23:19:31,136] WARNING — Received SIGINT signal
+[2025-06-05 23:19:40,082] INFO — Start polling
+[2025-06-05 23:19:40,170] INFO — Run polling for bot @PolinkaASMR_bot id=7788058987 - 'PolinkaASMR'
+[2025-06-05 23:19:53,879] INFO — Update id=213141374 is handled. Duration 233 ms by bot id=7788058987
