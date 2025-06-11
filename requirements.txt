@@ -1,6 +1,9 @@
-aiogram==3.4.1
-aiohttp
-fastapi
-python-dotenv
-sqlite-utils
-httpx
+aiogram>=3.0.0
+fastapi>=0.68.0
+uvicorn>=0.15.0
+python-dotenv>=0.19.0
+httpx>=0.23.0
+jinja2>=3.0.0
+python-multipart>=0.0.5
+aiohttp>=3.8.0
+sqlite-utils>=3.30
